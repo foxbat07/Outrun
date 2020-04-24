@@ -1,0 +1,26 @@
+{
+  "name": "outrun",
+  "version": "1.0.0",
+  "description": "Outrun visuals",
+  "main": "server.js",
+  "scripts": {
+    "build": "npm install",
+    "start": "node server.js",
+    "run": "nodemon server.js"
+  },
+  "keywords": [
+    "creative",
+    "code"
+  ],
+  "author": "Mohit Hingorani",
+  "license": "ISC",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.17.1",
+    "helmet": "^3.22.0",
+    "nodemon": "^2.0.3"
+  },
+  "engines": {
+    "node": "13.13.0"
+  }
+}
