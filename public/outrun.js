@@ -52,7 +52,7 @@ meshFolder.add(controls, 'baseHeight', 0, 10000).name('Plain Height');
 
 var animationFolder = gui.addFolder('Animation Folder');
 animationFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
-animationFolder.add(controls, 'speed', 1, 10).name('Speed');
+animationFolder.add(controls, 'speed', 0, 5).name('Speed');
 
 general.open();
 meshFolder.open();
@@ -131,7 +131,7 @@ function init(){
     // camera.position.z = 1000;
     // camera.position.set(0,400,5000);
 
-    camera.position.set(0,0,5000);
+    camera.position.set(0,0,35000);
     
     trackBallControls.rotateSpeed = 5;
     trackBallControls.zoomSpeed = 2;
@@ -161,7 +161,12 @@ function animate() {
     for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
         var x = i % ws
         var y = (parseInt(i/ws))/hs;
-        terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i))+ controls.amplitude * Math.sin((time + i)/controls.speed)) * attenuate(i) - controls.baseHeight;
+        var localNoise = Math.abs(perlin.noise(x,y,i));
+        var randomNoise = controls.amplitude * perlin.noise(i,x,y * Math.cos(controls.speed*time));
+        // var randomNoise = controls.amplitude * (perlin.noise(Math.cos(time * y * controls.speed),(time * controls.speed),Math.sin(time * x * controls.speed)))
+
+        terrainGeometry.vertices[i].y = (localNoise + randomNoise) * attenuate(i) - controls.baseHeight;
+        // terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i)) + controls.amplitude * Math.sin((time+i)/controls.speed)) * attenuate(i) - controls.baseHeight;
     }
     terrainGeometry.verticesNeedUpdate = true;
     
