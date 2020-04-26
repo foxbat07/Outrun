@@ -1,2 +1,2 @@
-# Supershapes3D
+# Outrun
 Outrun with three.js
