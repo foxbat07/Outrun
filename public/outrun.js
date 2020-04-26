@@ -2,11 +2,13 @@
 // essentials
 var gui = new dat.GUI();
 var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera( 60, window.innerWidth/window.innerHeight, 0.1, 100000 );
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1, 1000000 );
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 var spriteMap = new THREE.TextureLoader().load("assets/circle-64.png" );
 
 renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.gammaInput = true;
+renderer.gammaOutput = true;
 document.body.appendChild( renderer.domElement );
 
 
@@ -14,72 +16,71 @@ document.body.appendChild( renderer.domElement );
 // dat.gui
 var controls = new function() {
     this.ambientLight = 0xffffff;
-    // this.ambientLightIntensity = 1;
+    this.fogColor = 0xeb2df7;
+    this.fogDensity = 0.3; //  dividing by 100000
     this.terrainEmissiveColor = 0x000000;
-    this.terrainBaseColor = 0x000911;
-    this.wireframeEmissiveColor = 0x00ddff;
-    this.wireframeColor = 0x00ddff;
+    this.terrainBaseColor = 0x000000;
+    this.wireframeEmissiveColor = 0x00aaff;
+    this.wireframeColor = 0x000000;
     this.showWireframe = true;
     this.showBaseTerrain = true;
-    this.pathWidth = 2;
-    this.elevate = 200;
+    this.pathWidth = 3;
+    this.elevate = 500;
+    this.baseHeight = 3000;
+    this.amplitude = 0.1;
+    this.speed = 1;
 };
 
-var general = gui.addFolder('Outrun');
+var general = gui.addFolder('Outrun | Mohit Hingorani');
+general.addColor(controls, 'ambientLight').name('Ambient Light');
 
-general.addColor(controls, 'ambientLight').name('ambientLight');
+general.addColor(controls, 'fogColor').name('Fog Color');
+general.add(controls, 'fogDensity',0,1).name('Fog Density');
 
-general.addColor(controls, 'terrainEmissiveColor').name('Terrain Emissive Color');
-general.addColor(controls, 'terrainBaseColor').name('Terrain Color');
-general.add(controls, 'showBaseTerrain').name('Show Base Terrain');
+var meshFolder = gui.addFolder('Mesh');
+meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
+meshFolder.addColor(controls, 'terrainEmissiveColor').name('Terrain Emissive Color');
+meshFolder.addColor(controls, 'terrainBaseColor').name('Terrain Color');
 
-general.addColor(controls, 'wireframeEmissiveColor').name('Wireframe Emissive Color');
-general.addColor(controls, 'wireframeColor').name('Wireframe Color');
-general.add(controls, 'showWireframe').name('Show Wireframe');
+meshFolder.add(controls, 'showWireframe').name('Show Wireframe');
+meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Color');
+meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
-general.add(controls, 'pathWidth',0,25).name('Path Width');
-general.add(controls, 'elevate', 1, 1000).name('Elevate');
+meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
+meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
+meshFolder.add(controls, 'baseHeight', 0, 10000).name('Plain Height');
 
-// general.open();
+var animationFolder = gui.addFolder('Animation Folder');
+animationFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
+animationFolder.add(controls, 'speed', 1, 10).name('Speed');
+
+general.open();
+meshFolder.open();
 
 // initlaize lights
 var ambientLight = new THREE.AmbientLight(controls.ambientLight);
 scene.add( ambientLight );
 
-// var lights = [];
-// lights[ 0 ] = new THREE.PointLight( 0xffffff, 1, 0 );
-// lights[ 1 ] = new THREE.PointLight( 0xffffff, 1, 0 );
-// lights[ 2 ] = new THREE.PointLight( 0xffffff, 1, 0 );
-
-// lights[ 0 ].position.set( 0, 200, 0 );
-// lights[ 1 ].position.set( 100, 200, 100 );
-// lights[ 2 ].position.set( - 100, - 200, - 100 );
-
-// scene.add( lights[ 0 ] );
-// scene.add( lights[ 1 ] );
-// scene.add( lights[ 2 ] );
-            
-
 // intialize three
-var w = 5000;
-var h = 10000;
-var ws = w/100;
-var hs = h/100;
-// var pathWidth = 2;
-// var elevate = 200;
+var segments = 1000;
+var w = 40000;
+var h = 80000;
+var ws = w/segments;
+var hs = h/segments;
 
 var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
 var perlin = new THREE.ImprovedNoise();
 const loader = new THREE.TextureLoader();
 const skyBoxTexture = loader.load('assets/outrun.jpg');
-
-
+var clock = new THREE.Clock();
+var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/10000 );
 var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 
-// var terrainMaterial = new THREE.MeshBasicMaterial( { color: '#001122', wireframe: false } ) 
-var terrainMaterial = new THREE.MeshLambertMaterial( { color: controls.terrainBaseColor, emissive: controls.terrainEmissiveColor, side: THREE.DoubleSide, transparent: true } ) 
-// var wireframeMaterial = new THREE.MeshBasicMaterial( { color: '#00afff', wireframe: true } )
-var wireframeMaterial = new THREE.MeshLambertMaterial( { color: controls.wireframeColor, emissive: controls.wireframeEmissiveColor, wireframe: true } )
+terrainGeometry.rotateX( - Math.PI / 2 );
+terrainGeometry.translate(-(w/ws)/2,0, 0);
+
+var terrainMaterial = new THREE.MeshPhongMaterial( { color: controls.terrainBaseColor, emissive: controls.terrainEmissiveColor, side: THREE.DoubleSide, transparent: true } ) 
+var wireframeMaterial = new THREE.MeshPhongMaterial( { color: controls.wireframeColor, emissive: controls.wireframeEmissiveColor, wireframe: true } )
 
 function attenuate (i) {
     var position = Math.abs((i%ws) - ws/2);
@@ -88,10 +89,8 @@ function attenuate (i) {
     return height;
 }
 
-
 var baseTerrainMesh = new THREE.Mesh( terrainGeometry, terrainMaterial );
 var wireframeTerrainMesh = new THREE.Mesh( terrainGeometry, wireframeMaterial );
-
 
 // var quadGeoemetry = terrainGeometry.clone();
 
@@ -129,23 +128,26 @@ function init(){
     
     // terrainGeometry.translate(0,0,-1000);
     // terrainGeometry.rotateX( - Math.PI / 2.3);
-    
-    // camera.position.set(0,400,5000);
-    camera.position.set(0,0,5000);
     // camera.position.z = 1000;
+    // camera.position.set(0,400,5000);
+
+    camera.position.set(0,0,5000);
     
     trackBallControls.rotateSpeed = 5;
     trackBallControls.zoomSpeed = 2;
+
+    
     scene.add(wireframeTerrainMesh);
-    // scene.add(lineGroup);
     scene.add( baseTerrainMesh );
     
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    trackBallControls.update();
     
+    distantFog.color.setHex(controls.fogColor);
+    distantFog.density = controls.fogDensity/10000;
+
     ambientLight.color.setHex(controls.ambientLight);
     terrainMaterial.color.setHex(controls.terrainBaseColor);
     terrainMaterial.emissive.setHex(controls.terrainEmissiveColor);
@@ -153,22 +155,29 @@ function animate() {
     wireframeMaterial.color.setHex(controls.wireframeColor) ;
     wireframeMaterial.emissive.setHex(controls.wireframeEmissiveColor);
     
+    var delta = clock.getDelta();
+    var time = clock.getElapsedTime();
+    
     for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
         var x = i % ws
         var y = (parseInt(i/ws))/hs;
-        terrainGeometry.vertices[i].z = Math.abs(perlin.noise(x,y,i)) * attenuate(i);
+        terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i))+ controls.amplitude * Math.sin((time + i)/controls.speed)) * attenuate(i) - controls.baseHeight;
     }
     terrainGeometry.verticesNeedUpdate = true;
-    // terrainGeometry.rotation(3);
+    
+    trackBallControls.update(delta);
     render();
 };
 
 function render() { 
     scene.background = skyBoxTexture;
+    scene.fog = distantFog;
 
     baseTerrainMesh.visible = controls.showBaseTerrain;
     wireframeTerrainMesh.visible =controls.showWireframe;
 
+    // camera.position.setX(100);
+    // camera.lookAt.setX(100);
     // console.log(camera.position);
     renderer.render( scene, camera );
 }
