@@ -1,3 +1,4 @@
+// Outrun.js
 
 // essentials
 var gui = new dat.GUI();
@@ -15,7 +16,8 @@ document.body.appendChild( renderer.domElement );
 
 // dat.gui
 var controls = new function() {
-    this.ambientLight = 0xffffff;
+    this.sunColor = 0xd700ca;
+    this.sunLightColor = 0x000000;
     this.fogColor = 0xeb2df7;
     this.fogDensity = 0.3; //  dividing by 100000
     this.terrainEmissiveColor = 0x000000;
@@ -25,14 +27,16 @@ var controls = new function() {
     this.showWireframe = true;
     this.showBaseTerrain = true;
     this.pathWidth = 3;
-    this.elevate = 500;
+    this.elevate = 1000;
     this.baseHeight = 3000;
     this.amplitude = 0.1;
     this.speed = 1;
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
-general.addColor(controls, 'ambientLight').name('Ambient Light');
+
+general.addColor(controls, 'sunColor').name('Sun Base Color');
+general.addColor(controls, 'sunLightColor').name('Sun Light Color');
 
 general.addColor(controls, 'fogColor').name('Fog Color');
 general.add(controls, 'fogDensity',0,1).name('Fog Density');
@@ -47,7 +51,7 @@ meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Colo
 meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
 meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
-meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
+meshFolder.add(controls, 'elevate', 1, 5000).name('Hill Height');
 meshFolder.add(controls, 'baseHeight', 0, 10000).name('Plain Height');
 
 var animationFolder = gui.addFolder('Animation Folder');
@@ -58,20 +62,29 @@ general.open();
 meshFolder.open();
 
 // initlaize lights
-var ambientLight = new THREE.AmbientLight(controls.ambientLight);
-scene.add( ambientLight );
+// var ambientLight = new THREE.AmbientLight(controls.ambientLight);
+// scene.add( ambientLight );
+
+
+var sunGeometry = new THREE.CircleBufferGeometry( 40000, 64 );
+var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
+var sunMaterial = new THREE.MeshBasicMaterial( { color: controls.sunColor, fog: false} );
+sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
+sunLight.position.set( 0, 10000, -100000 );
+scene.add( sunLight );
+
 
 // intialize three
-var segments = 1000;
+var segmentLength = 1000;
 var w = 40000;
-var h = 80000;
-var ws = w/segments;
-var hs = h/segments;
+var h = 60000;
+var ws = w/segmentLength;
+var hs = h/segmentLength;
 
 var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
 var perlin = new THREE.ImprovedNoise();
 const loader = new THREE.TextureLoader();
-const skyBoxTexture = loader.load('assets/outrun.jpg');
+const skyBoxTexture = loader.load('assets/outrun-small3.jpg');
 var clock = new THREE.Clock();
 var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/10000 );
 var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
@@ -125,13 +138,8 @@ init();
 animate();
 
 function init(){
-    
-    // terrainGeometry.translate(0,0,-1000);
-    // terrainGeometry.rotateX( - Math.PI / 2.3);
-    // camera.position.z = 1000;
-    // camera.position.set(0,400,5000);
 
-    camera.position.set(0,0,35000);
+    camera.position.set(0,0,30000);
     
     trackBallControls.rotateSpeed = 5;
     trackBallControls.zoomSpeed = 2;
@@ -148,7 +156,10 @@ function animate() {
     distantFog.color.setHex(controls.fogColor);
     distantFog.density = controls.fogDensity/10000;
 
-    ambientLight.color.setHex(controls.ambientLight);
+    sunLight.color.setHex(controls.sunLightColor);
+    sunMaterial.color.setHex(controls.sunColor);
+    // console.log(sunLight);
+
     terrainMaterial.color.setHex(controls.terrainBaseColor);
     terrainMaterial.emissive.setHex(controls.terrainEmissiveColor);
     
@@ -180,10 +191,7 @@ function render() {
 
     baseTerrainMesh.visible = controls.showBaseTerrain;
     wireframeTerrainMesh.visible =controls.showWireframe;
-
-    // camera.position.setX(100);
-    // camera.lookAt.setX(100);
-    // console.log(camera.position);
+    
     renderer.render( scene, camera );
 }
 
