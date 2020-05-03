@@ -26,9 +26,9 @@ var controls = new function() {
     this.wireframeColor = 0x000000;
     this.showWireframe = true;
     this.showBaseTerrain = true;
-    this.pathWidth = 3;
-    this.elevate = 1000;
-    this.baseHeight = 3000;
+    this.pathWidth = 2;
+    this.elevate = 100;
+    this.baseHeight = 600;
     this.amplitude = 0.1;
     this.speed = 1;
 };
@@ -39,7 +39,7 @@ general.addColor(controls, 'sunColor').name('Sun Base Color');
 general.addColor(controls, 'sunLightColor').name('Sun Light Color');
 
 general.addColor(controls, 'fogColor').name('Fog Color');
-general.add(controls, 'fogDensity',0,1).name('Fog Density');
+general.add(controls, 'fogDensity',0,10).name('Fog Density');
 
 var meshFolder = gui.addFolder('Mesh');
 meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
@@ -51,8 +51,8 @@ meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Colo
 meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
 meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
-meshFolder.add(controls, 'elevate', 1, 5000).name('Hill Height');
-meshFolder.add(controls, 'baseHeight', 0, 10000).name('Plain Height');
+meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
+meshFolder.add(controls, 'baseHeight', 0, 2000).name('Plain Height');
 
 var animationFolder = gui.addFolder('Animation Folder');
 animationFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
@@ -66,18 +66,18 @@ meshFolder.open();
 // scene.add( ambientLight );
 
 
-var sunGeometry = new THREE.CircleBufferGeometry( 40000, 64 );
+var sunGeometry = new THREE.CircleBufferGeometry( 3000, 64 );
 var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
 var sunMaterial = new THREE.MeshBasicMaterial( { color: controls.sunColor, fog: false} );
 sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
-sunLight.position.set( 0, 10000, -100000 );
+sunLight.position.set( 0, 100, -10000 );
 scene.add( sunLight );
 
 
 // intialize three
-var segmentLength = 1000;
-var w = 40000;
-var h = 60000;
+var segmentLength = 200;
+var w = 5000;
+var h = 10000;
 var ws = w/segmentLength;
 var hs = h/segmentLength;
 
@@ -86,7 +86,7 @@ var perlin = new THREE.ImprovedNoise();
 const loader = new THREE.TextureLoader();
 const skyBoxTexture = loader.load('assets/outrun-small3.jpg');
 var clock = new THREE.Clock();
-var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/10000 );
+var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/1000 );
 var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 
 terrainGeometry.rotateX( - Math.PI / 2 );
@@ -139,7 +139,7 @@ animate();
 
 function init(){
 
-    camera.position.set(0,0,30000);
+    camera.position.set(0,0,3500);
     
     trackBallControls.rotateSpeed = 5;
     trackBallControls.zoomSpeed = 2;
