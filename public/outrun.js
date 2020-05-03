@@ -4,22 +4,30 @@
 var gui = new dat.GUI();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1, 1000000 );
-var renderer = new THREE.WebGLRenderer({ antialias: true });
+var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 var spriteMap = new THREE.TextureLoader().load("assets/circle-64.png" );
+var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
+
+var strDownloadMime = "image/octet-stream";
+
+// set time and clocks
+var date = new Date();
+var currentMillis = date.getMilliseconds();
+var currentTime = date.getTime();
+var clock = new THREE.Clock();
+
 
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.gammaInput = true;
 renderer.gammaOutput = true;
 document.body.appendChild( renderer.domElement );
 
-
-
 // dat.gui
 var controls = new function() {
     this.sunColor = 0xd700ca;
     this.sunLightColor = 0x000000;
     this.fogColor = 0xeb2df7;
-    this.fogDensity = 0.3; //  dividing by 100000
+    this.fogDensity = 2; //  dividing by 100000
     this.terrainEmissiveColor = 0x000000;
     this.terrainBaseColor = 0x000000;
     this.wireframeEmissiveColor = 0x00aaff;
@@ -31,6 +39,7 @@ var controls = new function() {
     this.baseHeight = 600;
     this.amplitude = 0.1;
     this.speed = 1;
+    this.takeImage = function(){ saveAsImage() };
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
@@ -39,7 +48,7 @@ general.addColor(controls, 'sunColor').name('Sun Base Color');
 general.addColor(controls, 'sunLightColor').name('Sun Light Color');
 
 general.addColor(controls, 'fogColor').name('Fog Color');
-general.add(controls, 'fogDensity',0,10).name('Fog Density');
+general.add(controls, 'fogDensity',0,5).name('Fog Density');
 
 var meshFolder = gui.addFolder('Mesh');
 meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
@@ -54,25 +63,13 @@ meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
 meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
 meshFolder.add(controls, 'baseHeight', 0, 2000).name('Plain Height');
 
-var animationFolder = gui.addFolder('Animation Folder');
-animationFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
-animationFolder.add(controls, 'speed', 0, 5).name('Speed');
+var utilityFolder = gui.addFolder('Utility Folder');
+utilityFolder.add(controls, 'takeImage').name('Take Screenshot');
+utilityFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
+utilityFolder.add(controls, 'speed', 0, 5).name('Speed');
 
 general.open();
 meshFolder.open();
-
-// initlaize lights
-// var ambientLight = new THREE.AmbientLight(controls.ambientLight);
-// scene.add( ambientLight );
-
-
-var sunGeometry = new THREE.CircleBufferGeometry( 3000, 64 );
-var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
-var sunMaterial = new THREE.MeshBasicMaterial( { color: controls.sunColor, fog: false} );
-sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
-sunLight.position.set( 0, 100, -10000 );
-scene.add( sunLight );
-
 
 // intialize three
 var segmentLength = 200;
@@ -81,11 +78,23 @@ var h = 10000;
 var ws = w/segmentLength;
 var hs = h/segmentLength;
 
-var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+// initialize lights
+// var ambientLight = new THREE.AmbientLight(controls.ambientLight);
+// scene.add( ambientLight );
+
+var sunGeometry = new THREE.CircleBufferGeometry( 3000, 32 );
+var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
+var sunMaterial = new THREE.MeshBasicMaterial({ color: controls.sunColor, fog: false });
+sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
+sunLight.position.set( 0, 100, -10000 );
+scene.add( sunLight );
+
+
 var perlin = new THREE.ImprovedNoise();
 const loader = new THREE.TextureLoader();
 const skyBoxTexture = loader.load('assets/outrun-small3.jpg');
-var clock = new THREE.Clock();
 var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/1000 );
 var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 
@@ -202,3 +211,31 @@ window.addEventListener( 'resize', function () {
 
 }, false );
 
+function saveAsImage() {
+    var imgData, imgNode;
+
+    try {
+        var strMime = "image/jpeg";
+        imgData = renderer.domElement.toDataURL(strMime);
+        var fileName = 'outrun-image-' + currentTime;
+        saveFile(imgData.replace(strMime, strDownloadMime), fileName);
+
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+
+}
+
+var saveFile = function (strData, filename) {
+    var link = document.createElement('a');
+    if (typeof link.download === 'string') {
+        document.body.appendChild(link); //Firefox requires the link to be in the body
+        link.download = filename;
+        link.href = strData;
+        link.click();
+        document.body.removeChild(link); //remove the link when done
+    } else {
+        location.replace(uri);
+    }
+}
