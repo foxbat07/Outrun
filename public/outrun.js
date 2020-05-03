@@ -14,7 +14,7 @@ var strDownloadMime = "image/octet-stream";
 
 // set time and clocks
 var date = new Date();
-var currentMillis = date.getMilliseconds();
+var startMillis = date.getMilliseconds();
 var currentTime = date.getTime();
 var clock = new THREE.Clock();
 
@@ -46,22 +46,18 @@ var controls = new function() {
     this.wireframeColor = 0x000000;
     this.showWireframe = true;
     this.showBaseTerrain = true;
-    this.pathWidth = 1;
+    this.pathWidth = 1.5;
     this.elevate = 1;
     this.baseHeight = 600;
 
-    this.amplitude = 0.1;
-    this.speed = 1;
+    this.amplitude = 100;
+    this.frequency = 0.1;
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
 general.add(controls, 'takeImage').name('Take Screenshot');
 general.addColor(controls, 'backgroundColor').name('Background Color');
 general.open();
-
-var utilityFolder = gui.addFolder('Utility');
-utilityFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
-utilityFolder.add(controls, 'speed', 0, 5).name('Speed');
 
 var sunFolder = gui.addFolder('Sun');
 sunFolder.addColor(controls, 'sunColor').name('Sun Fill Color');
@@ -82,10 +78,14 @@ meshFolder.add(controls, 'showWireframe').name('Show Wireframe');
 meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Color');
 meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
-meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
-meshFolder.add(controls, 'elevate', 0, 10).name('Hill Height');
+meshFolder.add(controls, 'pathWidth',0,15).name('Path Width');
+meshFolder.add(controls, 'elevate', 0, 5).name('Hill Height');
 meshFolder.add(controls, 'baseHeight', 0, 2000).name('Drop Plane');
 meshFolder.open();
+
+var utilityFolder = gui.addFolder('Animation');
+utilityFolder.add(controls, 'amplitude', 0,1000).name('Amplitude');
+utilityFolder.add(controls, 'frequency', 0, 1).name('Frequency');
 
 // intialize three
 
@@ -135,12 +135,21 @@ function generateHeight( size ) {
         for ( var i = 0; i < size; i ++ ) {
             var x = i % ws
             var y = (parseInt(i/ws))/hs;
-            // var z = perlin.noise(currentMillis,currentMillis,currentMillis);
-            var z = perlin.noise(x,y, i * currentMillis/1000);
+            var z = perlin.noise(x,y, i * startMillis/1000);
             data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z )) * quality;
         }
         quality *= 5;
     }
+
+    var currentMillis = clock.getElapsedTime()/500;
+    for ( var i = 0; i < size; i ++ ) {
+        var x = i % ws
+        var y = (parseInt(i/ws))/hs;
+        var z = perlin.noise(i * currentMillis *  controls.frequency , x, y);
+        data[ i ] += Math.abs( perlin.noise( 100* Math.sin(currentMillis * controls.frequency),100* Math.cos(currentMillis * controls.frequency), z )) * controls.amplitude;
+    }
+    quality *= 5;
+
     return data;
 }
 
@@ -183,6 +192,7 @@ function animate() {
     wireframeMaterial.color.setHex(controls.wireframeColor) ;
     wireframeMaterial.emissive.setHex(controls.wireframeEmissiveColor);
     
+    //generate terrain
     var newHeight = generateHeight(terrainGeometry.vertices.length);
     for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
         terrainGeometry.vertices[i].y = newHeight[i]  * attenuate(i) - controls.baseHeight ;
