@@ -47,7 +47,7 @@ var controls = new function() {
     this.showWireframe = true;
     this.showBaseTerrain = true;
     this.pathWidth = 1;
-    this.elevate = 300;
+    this.elevate = 1;
     this.baseHeight = 600;
 
     this.amplitude = 0.1;
@@ -83,8 +83,8 @@ meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Colo
 meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
 meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
-meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
-meshFolder.add(controls, 'baseHeight', 0, 2000).name('Plane Height');
+meshFolder.add(controls, 'elevate', 0, 10).name('Hill Height');
+meshFolder.add(controls, 'baseHeight', 0, 2000).name('Drop Plane');
 meshFolder.open();
 
 // intialize three
@@ -129,23 +129,20 @@ function attenuate (i) {
     return height;
 }
 
-function generateHeight() {
-    var quality = 1, z = 0.5;
-
-    for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
-        terrainGeometry.vertices[i].y = 0;
-    }
-
+function generateHeight( size ) {
+    var data = new Uint8Array( size ), quality = 1;
     for ( var j = 0; j < 4; j ++ ) {
-        for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
+        for ( var i = 0; i < size; i ++ ) {
             var x = i % ws
             var y = (parseInt(i/ws))/hs;
-            terrainGeometry.vertices[i].y += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
+            // var z = perlin.noise(currentMillis,currentMillis,currentMillis);
+            var z = perlin.noise(x,y, i * currentMillis/1000);
+            data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z )) * quality;
         }
         quality *= 5;
     }
+    return data;
 }
-
 
 // trigger threejs function starts
 
@@ -186,17 +183,9 @@ function animate() {
     wireframeMaterial.color.setHex(controls.wireframeColor) ;
     wireframeMaterial.emissive.setHex(controls.wireframeEmissiveColor);
     
-    // generateHeight();
-    var time = clock.getElapsedTime();
-    for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
-        var x = i % ws
-        var y = (parseInt(i/ws))/hs;
-        var localNoise = Math.abs(perlin.noise(x,y,perlin.noise(x,y,i/10)));
-        // var randomNoise = controls.amplitude * perlin.noise(i,x,y * Math.cos(controls.speed*time));
-        // var randomNoise = controls.amplitude * (perlin.noise(Math.cos(time * y * controls.speed),(time * controls.speed),Math.sin(time * x * controls.speed)))
-
-        terrainGeometry.vertices[i].y = (localNoise) * attenuate(i) - controls.baseHeight;
-        // terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i)) + controls.amplitude * Math.sin((time+i)/controls.speed)) * attenuate(i) - controls.baseHeight;
+    var newHeight = generateHeight(terrainGeometry.vertices.length);
+    for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
+        terrainGeometry.vertices[i].y = newHeight[i]  * attenuate(i) - controls.baseHeight ;
     }
 
     terrainGeometry.verticesNeedUpdate = true;
@@ -289,3 +278,18 @@ var saveFile = function (strData, filename) {
         // terrainGeometry.verticesNeedUpdate = true;
         // console.log('vertex',vertex);
         // camera.lookAt(new THREE.Vector3(0,0,0));
+
+
+            // // generateHeight();
+    // var time = clock.getElapsedTime();
+    // for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
+    //     var x = i % ws
+    //     var y = (parseInt(i/ws))/hs;
+    //     var z = perlin.noise(x,y, i * currentMillis/10000);
+    //     var localNoise = Math.abs(perlin.noise(x,y,z));
+    //     // var randomNoise = controls.amplitude * perlin.noise(i,x,y * Math.cos(controls.speed*time));
+    //     // var randomNoise = controls.amplitude * (perlin.noise(Math.cos(time * y * controls.speed),(time * controls.speed),Math.sin(time * x * controls.speed)))
+
+    //     terrainGeometry.vertices[i].y = (localNoise) * attenuate(i) - controls.baseHeight;
+    //     // terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i)) + controls.amplitude * Math.sin((time+i)/controls.speed)) * attenuate(i) - controls.baseHeight;
+    // }
