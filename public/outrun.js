@@ -39,6 +39,7 @@ var controls = new function() {
     this.sunSize = 1;
     this.sunInclination = 0;
 
+    this.enableStars = false;
     this.starColor = 0xffffff;
     this.starSize = 50;
     this.starDensity = 10000;
@@ -56,7 +57,7 @@ var controls = new function() {
     this.elevate = 1;
     this.baseHeight = 600;
 
-    this.enableAnimate = true;
+    this.enableDynamic = true;
     this.amplitude = 150;
     this.frequency = 1;
 };
@@ -73,6 +74,7 @@ sunFolder.add(controls, 'sunSize',0.001,5).name('Sun Scale');
 sunFolder.add(controls, 'sunInclination',-10,10).name('Sun Inclination');
 
 var starFolder = gui.addFolder('Stars');
+starFolder.add(controls, 'enableStars').name('Enable Stars');
 starFolder.addColor(controls, 'starColor').name('Star Color');
 starFolder.add(controls, 'starSize',1,250).name('Star Size');
 // starFolder.add(controls, 'starDensity',100,10000).name('Star Density');
@@ -81,7 +83,7 @@ var fogFolder = gui.addFolder('Fog');
 fogFolder.addColor(controls, 'fogColor').name('Fog Color');
 fogFolder.add(controls, 'fogDensity',0,5).name('Fog Density');
 
-var meshFolder = gui.addFolder('Terrain');
+var meshFolder = gui.addFolder('Static Terrain');
 meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
 meshFolder.addColor(controls, 'terrainEmissiveColor').name('Terrain Emissive Color');
 // meshFolder.addColor(controls, 'terrainBaseColor').name('Terrain Color');
@@ -96,7 +98,7 @@ meshFolder.add(controls, 'baseHeight', 0, 2000).name('Drop Plane');
 meshFolder.open();
 
 var utilityFolder = gui.addFolder('Dynamic Terrain');
-utilityFolder.add(controls, 'enableAnimate').name('Enable terrain');
+utilityFolder.add(controls, 'enableDynamic').name('Enable Dynamic');
 utilityFolder.add(controls, 'amplitude', 0,1000).name('Amplitude');
 utilityFolder.add(controls, 'frequency', 0, 2).name('Frequency');
 
@@ -186,7 +188,7 @@ function generateHeight( size ) {
         quality *= 5;
     }
 
-    if(controls.enableAnimate) {
+    if(controls.enableDynamic) {
         var modulate = clock.getElapsedTime() * controls.frequency / 1000;
         var modulateFactor = 10;
         for ( var i = 0; i < size; i ++ ) {
@@ -234,6 +236,7 @@ function animate() {
     sunLight.scale.x = controls.sunSize;
     sunLight.scale.y = controls.sunSize;
 
+    stars.visible = controls.enableStars;
     starMaterial.color.setHex(controls.starColor);
     starMaterial.setValues({size: controls.starSize});
 
