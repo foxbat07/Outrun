@@ -5,9 +5,11 @@ var gui = new dat.GUI();
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 1, 1000000 );
 var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-var spriteMap = new THREE.TextureLoader().load("assets/circle-64.png" );
-var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
+const loader = new THREE.TextureLoader();
+var spriteMap = loader.load("assets/circle-64.png" );
+const skyBoxTexture = loader.load('assets/outrun-small3.jpg');
 
+var perlin = new THREE.ImprovedNoise();
 var strDownloadMime = "image/octet-stream";
 
 // set time and clocks
@@ -22,35 +24,56 @@ renderer.gammaInput = true;
 renderer.gammaOutput = true;
 document.body.appendChild( renderer.domElement );
 
+var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
+
 // dat.gui
+
 var controls = new function() {
+
+    this.takeImage = function(){ saveAsImage() };
+    this.backgroundColor = 0x040437;
     this.sunColor = 0xd700ca;
     this.sunLightColor = 0x000000;
+    this.sunSize = 1;
+    this.sunInclination = 0;
+
     this.fogColor = 0xeb2df7;
     this.fogDensity = 2; //  dividing by 100000
+
     this.terrainEmissiveColor = 0x000000;
     this.terrainBaseColor = 0x000000;
     this.wireframeEmissiveColor = 0x00aaff;
     this.wireframeColor = 0x000000;
     this.showWireframe = true;
     this.showBaseTerrain = true;
-    this.pathWidth = 2;
-    this.elevate = 100;
+    this.pathWidth = 1;
+    this.elevate = 300;
     this.baseHeight = 600;
+
     this.amplitude = 0.1;
     this.speed = 1;
-    this.takeImage = function(){ saveAsImage() };
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
+general.add(controls, 'takeImage').name('Take Screenshot');
+general.addColor(controls, 'backgroundColor').name('Background Color');
+general.open();
 
-general.addColor(controls, 'sunColor').name('Sun Base Color');
-general.addColor(controls, 'sunLightColor').name('Sun Light Color');
+var utilityFolder = gui.addFolder('Utility');
+utilityFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
+utilityFolder.add(controls, 'speed', 0, 5).name('Speed');
 
-general.addColor(controls, 'fogColor').name('Fog Color');
-general.add(controls, 'fogDensity',0,5).name('Fog Density');
+var sunFolder = gui.addFolder('Sun');
+sunFolder.addColor(controls, 'sunColor').name('Sun Fill Color');
+sunFolder.addColor(controls, 'sunLightColor').name('Sun Reflect Color');
+sunFolder.add(controls, 'sunSize',0.001,5).name('Sun Scale');
+sunFolder.add(controls, 'sunInclination',-10,10).name('Sun Inclination');
 
-var meshFolder = gui.addFolder('Mesh');
+var fogFolder = gui.addFolder('Fog');
+fogFolder.addColor(controls, 'fogColor').name('Fog Color');
+fogFolder.add(controls, 'fogDensity',0,5).name('Fog Density');
+
+var meshFolder = gui.addFolder('Terrain');
 meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
 meshFolder.addColor(controls, 'terrainEmissiveColor').name('Terrain Emissive Color');
 meshFolder.addColor(controls, 'terrainBaseColor').name('Terrain Color');
@@ -61,48 +84,43 @@ meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
 meshFolder.add(controls, 'pathWidth',0,25).name('Path Width');
 meshFolder.add(controls, 'elevate', 1, 1000).name('Hill Height');
-meshFolder.add(controls, 'baseHeight', 0, 2000).name('Plain Height');
-
-var utilityFolder = gui.addFolder('Utility Folder');
-utilityFolder.add(controls, 'takeImage').name('Take Screenshot');
-utilityFolder.add(controls, 'amplitude', 0,1).name('Amplitude');
-utilityFolder.add(controls, 'speed', 0, 5).name('Speed');
-
-general.open();
+meshFolder.add(controls, 'baseHeight', 0, 2000).name('Plane Height');
 meshFolder.open();
 
 // intialize three
+
 var segmentLength = 200;
 var w = 5000;
 var h = 10000;
 var ws = w/segmentLength;
 var hs = h/segmentLength;
-
-
+var sunSizeBase = 4000;
+var sunPositionMultiplier = 1500;
+var sunZPosition = -10000;
 
 // initialize lights
 // var ambientLight = new THREE.AmbientLight(controls.ambientLight);
-// scene.add( ambientLight );
 
-var sunGeometry = new THREE.CircleBufferGeometry( 3000, 32 );
+var sunGeometry = new THREE.CircleBufferGeometry( sunSizeBase, 64 );
 var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
 var sunMaterial = new THREE.MeshBasicMaterial({ color: controls.sunColor, fog: false });
 sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
-sunLight.position.set( 0, 100, -10000 );
-scene.add( sunLight );
+sunLight.position.set( 0, controls.sunInclination * sunPositionMultiplier, sunZPosition );
 
-
-var perlin = new THREE.ImprovedNoise();
-const loader = new THREE.TextureLoader();
-const skyBoxTexture = loader.load('assets/outrun-small3.jpg');
 var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/1000 );
-var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 
+var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 terrainGeometry.rotateX( - Math.PI / 2 );
 terrainGeometry.translate(-(w/ws)/2,0, 0);
 
 var terrainMaterial = new THREE.MeshPhongMaterial( { color: controls.terrainBaseColor, emissive: controls.terrainEmissiveColor, side: THREE.DoubleSide, transparent: true } ) 
 var wireframeMaterial = new THREE.MeshPhongMaterial( { color: controls.wireframeColor, emissive: controls.wireframeEmissiveColor, wireframe: true } )
+
+var baseTerrainMesh = new THREE.Mesh( terrainGeometry, terrainMaterial );
+var wireframeTerrainMesh = new THREE.Mesh( terrainGeometry, wireframeMaterial );
+
+
+// generate terrain
 
 function attenuate (i) {
     var position = Math.abs((i%ws) - ws/2);
@@ -111,8 +129,137 @@ function attenuate (i) {
     return height;
 }
 
-var baseTerrainMesh = new THREE.Mesh( terrainGeometry, terrainMaterial );
-var wireframeTerrainMesh = new THREE.Mesh( terrainGeometry, wireframeMaterial );
+function generateHeight() {
+    var quality = 1, z = 0.5;
+
+    for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
+        terrainGeometry.vertices[i].y = 0;
+    }
+
+    for ( var j = 0; j < 4; j ++ ) {
+        for ( var i = 0; i < terrainGeometry.vertices.length; i ++ ) {
+            var x = i % ws
+            var y = (parseInt(i/ws))/hs;
+            terrainGeometry.vertices[i].y += Math.abs( perlin.noise( x / quality, y / quality, z ) * quality * 1.75 );
+        }
+        quality *= 5;
+    }
+}
+
+
+// trigger threejs function starts
+
+init();
+animate();
+
+// threejs init function
+
+function init(){
+
+    camera.position.set(0,0,4000);
+    
+    trackBallControls.rotateSpeed = 4;
+    trackBallControls.zoomSpeed = 1;
+
+    scene.add(wireframeTerrainMesh);
+    scene.add( baseTerrainMesh );
+    scene.add( sunLight );
+}
+
+// threejs animate function
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    distantFog.color.setHex(controls.fogColor);
+    distantFog.density = controls.fogDensity/10000;
+
+    sunLight.color.setHex(controls.sunLightColor);
+    sunMaterial.color.setHex(controls.sunColor);
+    sunLight.position.set( 0, controls.sunInclination * sunPositionMultiplier, -10000 );
+    sunLight.scale.x = controls.sunSize;
+    sunLight.scale.y = controls.sunSize;
+
+    terrainMaterial.color.setHex(controls.terrainBaseColor);
+    terrainMaterial.emissive.setHex(controls.terrainEmissiveColor);
+    
+    wireframeMaterial.color.setHex(controls.wireframeColor) ;
+    wireframeMaterial.emissive.setHex(controls.wireframeEmissiveColor);
+    
+    // generateHeight();
+    var time = clock.getElapsedTime();
+    for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
+        var x = i % ws
+        var y = (parseInt(i/ws))/hs;
+        var localNoise = Math.abs(perlin.noise(x,y,perlin.noise(x,y,i/10)));
+        // var randomNoise = controls.amplitude * perlin.noise(i,x,y * Math.cos(controls.speed*time));
+        // var randomNoise = controls.amplitude * (perlin.noise(Math.cos(time * y * controls.speed),(time * controls.speed),Math.sin(time * x * controls.speed)))
+
+        terrainGeometry.vertices[i].y = (localNoise) * attenuate(i) - controls.baseHeight;
+        // terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i)) + controls.amplitude * Math.sin((time+i)/controls.speed)) * attenuate(i) - controls.baseHeight;
+    }
+
+    terrainGeometry.verticesNeedUpdate = true;
+    
+    trackBallControls.update();
+    render();
+};
+
+
+// threejs render function
+
+function render() { 
+    // scene.background = skyBoxTexture;
+    scene.background = new THREE.Color(controls.backgroundColor);
+    scene.fog = distantFog;
+
+    baseTerrainMesh.visible = controls.showBaseTerrain;
+    wireframeTerrainMesh.visible =controls.showWireframe;
+    
+    renderer.render( scene, camera );
+}
+
+window.addEventListener( 'resize', function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+}, false );
+
+
+// Image saving
+
+function saveAsImage() {
+    var imgData, imgNode;
+
+    try {
+        var strMime = "image/jpeg";
+        imgData = renderer.domElement.toDataURL(strMime);
+        var fileName = 'outrun-image-' + currentTime+ '.jpg';
+        saveFile(imgData.replace(strMime, strDownloadMime), fileName);
+
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+
+}
+
+var saveFile = function (strData, filename) {
+    var link = document.createElement('a');
+    if (typeof link.download === 'string') {
+        document.body.appendChild(link); //Firefox requires the link to be in the body
+        link.download = filename;
+        link.href = strData;
+        link.click();
+        document.body.removeChild(link); //remove the link when done
+    } else {
+        location.replace(uri);
+    }
+}
+
+
+
 
 // var quadGeoemetry = terrainGeometry.clone();
 
@@ -142,100 +289,3 @@ var wireframeTerrainMesh = new THREE.Mesh( terrainGeometry, wireframeMaterial );
         // terrainGeometry.verticesNeedUpdate = true;
         // console.log('vertex',vertex);
         // camera.lookAt(new THREE.Vector3(0,0,0));
-        
-init();
-animate();
-
-function init(){
-
-    camera.position.set(0,0,3500);
-    
-    trackBallControls.rotateSpeed = 5;
-    trackBallControls.zoomSpeed = 2;
-
-    
-    scene.add(wireframeTerrainMesh);
-    scene.add( baseTerrainMesh );
-    
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    
-    distantFog.color.setHex(controls.fogColor);
-    distantFog.density = controls.fogDensity/10000;
-
-    sunLight.color.setHex(controls.sunLightColor);
-    sunMaterial.color.setHex(controls.sunColor);
-    // console.log(sunLight);
-
-    terrainMaterial.color.setHex(controls.terrainBaseColor);
-    terrainMaterial.emissive.setHex(controls.terrainEmissiveColor);
-    
-    wireframeMaterial.color.setHex(controls.wireframeColor) ;
-    wireframeMaterial.emissive.setHex(controls.wireframeEmissiveColor);
-    
-    var delta = clock.getDelta();
-    var time = clock.getElapsedTime();
-    
-    for (let i = 0 ; i < terrainGeometry.vertices.length ; i++ ) {
-        var x = i % ws
-        var y = (parseInt(i/ws))/hs;
-        var localNoise = Math.abs(perlin.noise(x,y,i));
-        var randomNoise = controls.amplitude * perlin.noise(i,x,y * Math.cos(controls.speed*time));
-        // var randomNoise = controls.amplitude * (perlin.noise(Math.cos(time * y * controls.speed),(time * controls.speed),Math.sin(time * x * controls.speed)))
-
-        terrainGeometry.vertices[i].y = (localNoise + randomNoise) * attenuate(i) - controls.baseHeight;
-        // terrainGeometry.vertices[i].y = (Math.abs(perlin.noise(x,y,i)) + controls.amplitude * Math.sin((time+i)/controls.speed)) * attenuate(i) - controls.baseHeight;
-    }
-    terrainGeometry.verticesNeedUpdate = true;
-    
-    trackBallControls.update(delta);
-    render();
-};
-
-function render() { 
-    scene.background = skyBoxTexture;
-    scene.fog = distantFog;
-
-    baseTerrainMesh.visible = controls.showBaseTerrain;
-    wireframeTerrainMesh.visible =controls.showWireframe;
-    
-    renderer.render( scene, camera );
-}
-
-window.addEventListener( 'resize', function () {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-
-}, false );
-
-function saveAsImage() {
-    var imgData, imgNode;
-
-    try {
-        var strMime = "image/jpeg";
-        imgData = renderer.domElement.toDataURL(strMime);
-        var fileName = 'outrun-image-' + currentTime;
-        saveFile(imgData.replace(strMime, strDownloadMime), fileName);
-
-    } catch (e) {
-        console.log(e);
-        return;
-    }
-
-}
-
-var saveFile = function (strData, filename) {
-    var link = document.createElement('a');
-    if (typeof link.download === 'string') {
-        document.body.appendChild(link); //Firefox requires the link to be in the body
-        link.download = filename;
-        link.href = strData;
-        link.click();
-        document.body.removeChild(link); //remove the link when done
-    } else {
-        location.replace(uri);
-    }
-}
