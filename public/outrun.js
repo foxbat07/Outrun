@@ -32,10 +32,15 @@ var controls = new function() {
 
     this.takeImage = function(){ saveAsImage() };
     this.backgroundColor = 0x040437;
+
     this.sunColor = 0xd700ca;
     this.sunLightColor = 0x000000;
     this.sunSize = 1;
     this.sunInclination = 0;
+
+    this.starColor = 0xffffff;
+    this.starSize = 50;
+    this.starDensity = 10000;
 
     this.fogColor = 0xeb2df7;
     this.fogDensity = 2; //  dividing by 100000
@@ -64,6 +69,11 @@ sunFolder.addColor(controls, 'sunColor').name('Sun Fill Color');
 sunFolder.addColor(controls, 'sunLightColor').name('Sun Reflect Color');
 sunFolder.add(controls, 'sunSize',0.001,5).name('Sun Scale');
 sunFolder.add(controls, 'sunInclination',-10,10).name('Sun Inclination');
+
+var starFolder = gui.addFolder('Stars');
+starFolder.addColor(controls, 'starColor').name('Star Color');
+starFolder.add(controls, 'starSize',1,250).name('Star Size');
+// starFolder.add(controls, 'starDensity',100,10000).name('Star Density');
 
 var fogFolder = gui.addFolder('Fog');
 fogFolder.addColor(controls, 'fogColor').name('Fog Color');
@@ -98,16 +108,51 @@ var sunSizeBase = 4000;
 var sunPositionMultiplier = 1500;
 var sunZPosition = -10000;
 
-// initialize lights
-// var ambientLight = new THREE.AmbientLight(controls.ambientLight);
 
+
+// initialize star
+var particles = 1000;
+var positions = [];
+var n = 100000, n2 = n / 2;
+var starGeometry = new THREE.BufferGeometry();
+
+for ( var i = 0; i < particles; i ++ ) {
+
+    // positions
+
+    var x = Math.random() * n - n2;
+    var y = Math.random() * n - n2;
+    var z = -11000;
+
+    positions.push( x, y, z );
+}
+
+starGeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+var starMaterial = new THREE.PointsMaterial( { 
+    color: 0xffffff,
+    depthTest: true,
+    fog: false,
+    map: spriteMap,
+    size: 100,
+    sizeAttentuation: false,
+} );
+var stars = new THREE.Points( starGeometry, starMaterial );
+
+
+
+// initialize Sun
 var sunGeometry = new THREE.CircleBufferGeometry( sunSizeBase, 64 );
 var sunLight = new THREE.PointLight( controls.sunLightColor, 2, 50 );
 var sunMaterial = new THREE.MeshBasicMaterial({ color: controls.sunColor, fog: false });
 sunLight.add( new THREE.Mesh( sunGeometry, sunMaterial ) );
 sunLight.position.set( 0, controls.sunInclination * sunPositionMultiplier, sunZPosition );
 
+
+// initalize fog
 var distantFog = new THREE.FogExp2( controls.fogColor, controls.fogDensity/1000 );
+
+
+// initialize terrain
 
 var terrainGeometry = new THREE.PlaneGeometry( w,h,ws-1,hs-1); // - 1 since it uses segments - keeps the math straight
 terrainGeometry.rotateX( - Math.PI / 2 );
@@ -170,6 +215,7 @@ function init(){
     scene.add(wireframeTerrainMesh);
     scene.add( baseTerrainMesh );
     scene.add( sunLight );
+    scene.add( stars );
 }
 
 // threejs animate function
@@ -185,6 +231,9 @@ function animate() {
     sunLight.position.set( 0, controls.sunInclination * sunPositionMultiplier, -10000 );
     sunLight.scale.x = controls.sunSize;
     sunLight.scale.y = controls.sunSize;
+
+    starMaterial.color.setHex(controls.starColor);
+    starMaterial.setValues({size: controls.starSize});
 
     terrainMaterial.color.setHex(controls.terrainBaseColor);
     terrainMaterial.emissive.setHex(controls.terrainEmissiveColor);
