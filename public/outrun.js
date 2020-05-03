@@ -84,19 +84,19 @@ fogFolder.add(controls, 'fogDensity',0,5).name('Fog Density');
 var meshFolder = gui.addFolder('Terrain');
 meshFolder.add(controls, 'showBaseTerrain').name('Show Base Terrain');
 meshFolder.addColor(controls, 'terrainEmissiveColor').name('Terrain Emissive Color');
-meshFolder.addColor(controls, 'terrainBaseColor').name('Terrain Color');
+// meshFolder.addColor(controls, 'terrainBaseColor').name('Terrain Color');
 
 meshFolder.add(controls, 'showWireframe').name('Show Wireframe');
 meshFolder.addColor(controls, 'wireframeEmissiveColor').name('Wire Emissive Color');
-meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
+// meshFolder.addColor(controls, 'wireframeColor').name('Wireframe Color');
 
 meshFolder.add(controls, 'pathWidth',0,15).name('Path Width');
 meshFolder.add(controls, 'elevate', 0, 5).name('Hill Height');
 meshFolder.add(controls, 'baseHeight', 0, 2000).name('Drop Plane');
 meshFolder.open();
 
-var utilityFolder = gui.addFolder('Animation');
-utilityFolder.add(controls, 'enableAnimate').name('Dynamic Terrain');
+var utilityFolder = gui.addFolder('Dynamic Terrain');
+utilityFolder.add(controls, 'enableAnimate').name('Enable terrain');
 utilityFolder.add(controls, 'amplitude', 0,1000).name('Amplitude');
 utilityFolder.add(controls, 'frequency', 0, 2).name('Frequency');
 
