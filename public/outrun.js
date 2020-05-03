@@ -17,6 +17,7 @@ var date = new Date();
 var startMillis = date.getMilliseconds();
 var currentTime = date.getTime();
 var clock = new THREE.Clock();
+clock.start();
 
 
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -95,7 +96,7 @@ meshFolder.open();
 
 var utilityFolder = gui.addFolder('Animation');
 utilityFolder.add(controls, 'amplitude', 0,1000).name('Amplitude');
-utilityFolder.add(controls, 'frequency', 0, 1).name('Frequency');
+utilityFolder.add(controls, 'frequency', 0, 5).name('Frequency');
 
 // intialize three
 
@@ -111,7 +112,7 @@ var sunZPosition = -10000;
 
 
 // initialize star
-var particles = 1000;
+var particles = 2000;
 var positions = [];
 var n = 100000, n2 = n / 2;
 var starGeometry = new THREE.BufferGeometry();
@@ -180,18 +181,19 @@ function generateHeight( size ) {
         for ( var i = 0; i < size; i ++ ) {
             var x = i % ws
             var y = (parseInt(i/ws))/hs;
-            var z = perlin.noise(x,y, i * startMillis/1000);
+            var z = perlin.noise(x,y, i * startMillis/1000); //startMillis helps keep things random on each initialize
             data[ i ] += Math.abs( perlin.noise( x / quality, y / quality, z )) * quality;
         }
         quality *= 5;
     }
 
-    var currentMillis = clock.getElapsedTime()/500;
+    var modulate = clock.getElapsedTime() * controls.frequency / 1000;
+    var modulateFactor = 10;
     for ( var i = 0; i < size; i ++ ) {
         var x = i % ws
         var y = (parseInt(i/ws))/hs;
-        var z = perlin.noise(i * currentMillis *  controls.frequency , x, y);
-        data[ i ] += Math.abs( perlin.noise( 100* Math.sin(currentMillis * controls.frequency),100* Math.cos(currentMillis * controls.frequency), z )) * controls.amplitude;
+        var z = perlin.noise(i * modulate , x, y);
+        data[ i ] += Math.abs( perlin.noise( modulateFactor * Math.sin(modulate), modulateFactor * Math.cos(modulate), z )) * controls.amplitude;
     }
     quality *= 5;
 
