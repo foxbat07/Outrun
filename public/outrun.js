@@ -118,9 +118,6 @@ var n = 100000, n2 = n / 2;
 var starGeometry = new THREE.BufferGeometry();
 
 for ( var i = 0; i < particles; i ++ ) {
-
-    // positions
-
     var x = Math.random() * n - n2;
     var y = Math.random() * n - n2;
     var z = -11000;
@@ -225,7 +222,7 @@ function init(){
 function animate() {
     requestAnimationFrame(animate);
     
-    distantFog.color.setHex(controls.fogColor);
+    distantFog.color.set(controls.fogColor); // not using Hex on purpose
     distantFog.density = controls.fogDensity/10000;
 
     sunLight.color.setHex(controls.sunLightColor);
