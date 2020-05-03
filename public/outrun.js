@@ -56,8 +56,9 @@ var controls = new function() {
     this.elevate = 1;
     this.baseHeight = 600;
 
-    this.amplitude = 100;
-    this.frequency = 0.1;
+    this.enableAnimate = true;
+    this.amplitude = 150;
+    this.frequency = 1;
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
@@ -95,8 +96,9 @@ meshFolder.add(controls, 'baseHeight', 0, 2000).name('Drop Plane');
 meshFolder.open();
 
 var utilityFolder = gui.addFolder('Animation');
+utilityFolder.add(controls, 'enableAnimate').name('Dynamic Terrain');
 utilityFolder.add(controls, 'amplitude', 0,1000).name('Amplitude');
-utilityFolder.add(controls, 'frequency', 0, 5).name('Frequency');
+utilityFolder.add(controls, 'frequency', 0, 2).name('Frequency');
 
 // intialize three
 
@@ -184,15 +186,16 @@ function generateHeight( size ) {
         quality *= 5;
     }
 
-    var modulate = clock.getElapsedTime() * controls.frequency / 1000;
-    var modulateFactor = 10;
-    for ( var i = 0; i < size; i ++ ) {
-        var x = i % ws
-        var y = (parseInt(i/ws))/hs;
-        var z = perlin.noise(i * modulate , x, y);
-        data[ i ] += Math.abs( perlin.noise( modulateFactor * Math.sin(modulate), modulateFactor * Math.cos(modulate), z )) * controls.amplitude;
+    if(controls.enableAnimate) {
+        var modulate = clock.getElapsedTime() * controls.frequency / 1000;
+        var modulateFactor = 10;
+        for ( var i = 0; i < size; i ++ ) {
+            var x = i % ws
+            var y = (parseInt(i/ws))/hs;
+            var z = perlin.noise(i * modulate , x, y);
+            data[ i ] += Math.abs( perlin.noise( modulateFactor * Math.sin(modulate), modulateFactor * Math.cos(modulate), z )) * controls.amplitude;
+        }
     }
-    quality *= 5;
 
     return data;
 }
