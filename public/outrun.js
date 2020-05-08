@@ -39,7 +39,7 @@ var controls = new function() {
     this.sunSize = 1;
     this.sunInclination = 0;
 
-    this.enableStars = false;
+    this.enableStars = true;
     this.starColor = 0xffffff;
     this.starSize = 50;
     this.starDensity = 10000;
@@ -116,7 +116,7 @@ var sunZPosition = -10000;
 
 
 // initialize star
-var particles = 2000;
+var particles = 1000;
 var positions = [];
 var n = 100000, n2 = n / 2;
 var starGeometry = new THREE.BufferGeometry();
