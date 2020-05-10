@@ -254,7 +254,7 @@ function animate() {
     }
 
     terrainGeometry.verticesNeedUpdate = true;
-    
+    wireframeTerrainMesh.position.set(0,1,0);
     trackBallControls.update();
     render();
 };
