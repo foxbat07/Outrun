@@ -23,6 +23,7 @@ clock.start();
 renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.gammaInput = true;
 renderer.gammaOutput = true;
+// renderer.toneMapping = THREE.ReinhardToneMapping;
 document.body.appendChild( renderer.domElement );
 
 var trackBallControls = new THREE.TrackballControls( camera, renderer.domElement );
@@ -59,7 +60,7 @@ var controls = new function() {
 
     this.enableDynamic = true;
     this.amplitude = 150;
-    this.frequency = 1;
+    this.frequency = 0.5;
 };
 
 var general = gui.addFolder('Outrun | Mohit Hingorani');
